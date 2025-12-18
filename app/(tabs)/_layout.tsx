@@ -5,8 +5,7 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: "#020617" },
-        headerTintColor: "white",
+        headerShown: false,
         tabBarStyle: {
           backgroundColor: "#020617",
           height: 60,
@@ -24,6 +23,7 @@ export default function TabLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="explore"
         options={{
@@ -31,6 +31,14 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="compass" size={size} color={color} />
           ),
+        }}
+      />
+
+      {/* 🚫 Hide details from tab bar */}
+      <Tabs.Screen
+        name="details"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

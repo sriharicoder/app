@@ -1,95 +1,107 @@
 import { useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  SafeAreaView,
+  ScrollView,
+} from "react-native";
+import { Stack } from "expo-router";
+
 import AnimatedGradient from "../../components/animations/AnimatedGradient";
 import WeatherAnimation from "../../components/animations/WeatherAnimation";
 import WeatherCard from "../../components/WeatherCard";
+import { FiveDayForecast } from "../../components/BottomSection"; // ✅ IMPORT
 
 export default function Index() {
   const [city, setCity] = useState("");
 
-  // 🌙 Day / Night detection
   const hour = new Date().getHours();
   const isNight = hour >= 18 || hour <= 5;
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* 🌈 FULL SCREEN ANIMATED BACKGROUND */}
-      <AnimatedGradient isNight={isNight}>
-        {/* 🔽 BACKGROUND WEATHER EFFECTS (NON-INTERACTIVE) */}
-        <View
-          style={{
-            position: "absolute",
-            inset: 0,
-            pointerEvents: "none",
-          }}
-        >
-          <WeatherAnimation weather="storm" isNight={isNight} />
-        </View>
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
 
-        {/* 🔼 UI CONTENT */}
-        <View className="flex-1 px-5 pt-10">
-          {/* Title */}
-          <Text className="text-3xl font-extrabold text-white text-center mb-6">
-            🌤 Smart Weather App
-          </Text>
-
-          {/* 🔍 SEARCH CARD */}
+      <View style={{ flex: 1 }}>
+        <AnimatedGradient isNight={isNight}>
+          {/* 🌦 Background animation */}
           <View
             style={{
-              backgroundColor: "rgba(255,255,255,0.95)",
-              borderRadius: 24,
-              padding: 16,
-              shadowColor: "#000",
-              shadowOpacity: 0.15,
-              shadowRadius: 12,
-              elevation: 6,
-              marginBottom: 18,
+              position: "absolute",
+              inset: 0,
+              pointerEvents: "none",
             }}
           >
-            <TextInput
-              placeholder="Enter city name"
-              placeholderTextColor="#94a3b8"
-              value={city}
-              onChangeText={setCity}
-              style={{
-                backgroundColor: "#f1f5f9",
-                borderRadius: 16,
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-                fontSize: 16,
-                color: "#0f172a",
-                marginBottom: 12,
-              }}
-              returnKeyType="search"
-            />
-
-            <TouchableOpacity
-              disabled={!city.trim()}
-              style={{
-                backgroundColor: city.trim()
-                  ? "#2563eb"
-                  : "#94a3b8",
-                paddingVertical: 14,
-                borderRadius: 16,
-                alignItems: "center",
-              }}
-            >
-              <Text
-                style={{
-                  color: "white",
-                  fontSize: 16,
-                  fontWeight: "600",
-                }}
-              >
-                Check Weather
-              </Text>
-            </TouchableOpacity>
+            <WeatherAnimation weather="storm" isNight={isNight} />
           </View>
 
-          {/* 🌦 WEATHER CARD */}
-          <WeatherCard city={city || "Sankarandampalayam"} />
-        </View>
-      </AnimatedGradient>
-    </View>
+          <SafeAreaView style={{ flex: 1 }}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingTop: 24, paddingBottom: 30 }}
+            >
+              {/* TITLE */}
+              <Text
+                style={{
+                  fontSize: 28,
+                  fontWeight: "800",
+                  color: "white",
+                  textAlign: "center",
+                  marginBottom: 20,
+                }}
+              >
+                🌤 Smart Weather App
+              </Text>
+
+              {/* SEARCH CARD */}
+              <View
+                style={{
+                  marginHorizontal: 20,
+                  backgroundColor: "rgba(255,255,255,0.95)",
+                  borderRadius: 24,
+                  padding: 16,
+                  marginBottom: 20,
+                }}
+              >
+                <TextInput
+                  placeholder="Enter city name"
+                  value={city}
+                  onChangeText={setCity}
+                  style={{
+                    backgroundColor: "#f1f5f9",
+                    borderRadius: 16,
+                    padding: 14,
+                    marginBottom: 12,
+                  }}
+                />
+
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: "#2563eb",
+                    paddingVertical: 14,
+                    borderRadius: 16,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: "white", fontWeight: "600" }}>
+                    Check Weather
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* 🌦 SAME WIDTH SECTION */}
+              <View style={{ marginHorizontal: 14 }}>
+                <WeatherCard city={city || "Sankarandampalayam"} />
+
+                {/* ✅ 5-DAY PREVIEW ONLY */}
+                <FiveDayForecast showDetailsLink />
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        </AnimatedGradient>
+      </View>
+    </>
   );
 }
