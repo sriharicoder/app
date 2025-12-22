@@ -1,5 +1,5 @@
-const API_KEY = "1440eccec0bca293721dee50599c3dd3";
-const BASE_URL = "https://api.openweathermap.org/data/2.5";
+const API_KEY = process.env.EXPO_PUBLIC_WEATHER_API_KEY!;
+const BASE_URL = process.env.EXPO_PUBLIC_WEATHER_BASE_URL!;
 
 export async function getCurrentWeather(city: string) {
   const query = encodeURIComponent(city);
