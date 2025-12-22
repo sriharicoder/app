@@ -8,6 +8,10 @@ import WeatherAnimation, {
 /* ---------------- PROPS ---------------- */
 type Props = {
   city: string;
+  temperature: number;
+  humidity: number;
+  wind: number;
+  condition: string;
 };
 
 /* ---------------- DAY / NIGHT ---------------- */
@@ -16,19 +20,27 @@ const isNightTime = () => {
   return hour >= 18 || hour <= 5;
 };
 
+/* ---------------- WEATHER MAPPER ---------------- */
+const mapConditionToWeather = (condition: string): WeatherType => {
+  if (condition === "Rain") return "rainy";
+  if (condition === "Clouds") return "cloudy";
+  if (condition === "Thunderstorm") return "storm";
+  return "sunny";
+};
+
 /* ---------------- GRADIENT ---------------- */
 const getTempGradient = (
   temp: number,
   night: boolean
 ): readonly [string, string] => {
   if (night) return ["#020617", "#0f172a"]; // night
-  if (temp <= 15) return ["#38bdf8", "#1e40af"];
-  if (temp <= 25) return ["#22c55e", "#84cc16"];
-  if (temp <= 35) return ["#facc15", "#f97316"];
-  return ["#ef4444", "#b91c1c"];
+  if (temp <= 15) return ["#38bdf8", "#1e40af"]; // cold
+  if (temp <= 25) return ["#22c55e", "#84cc16"]; // pleasant
+  if (temp <= 35) return ["#facc15", "#f97316"]; // warm
+  return ["#ef4444", "#b91c1c"]; // hot
 };
 
-/* ---------------- FORECAST ---------------- */
+/* ---------------- FORECAST (PREVIEW) ---------------- */
 const forecast = [
   { day: "Mon", temp: 26, icon: "☀️" },
   { day: "Tue", temp: 28, icon: "🌤️" },
@@ -37,55 +49,102 @@ const forecast = [
   { day: "Fri", temp: 27, icon: "☀️" },
 ];
 
-export default function WeatherCard({ city }: Props) {
-  const temperature = 25;
-  const weather: WeatherType = "storm";
+export default function WeatherCard({
+  city,
+  temperature,
+  humidity,
+  wind,
+  condition,
+}: Props) {
   const night = isNightTime();
-
+  const weather: WeatherType = mapConditionToWeather(condition);
   const colors = getTempGradient(temperature, night);
 
   return (
-    <Animated.View entering={FadeInUp.duration(600)} className="mt-6">
-      <View className="rounded-3xl overflow-hidden shadow-xl">
+    <Animated.View entering={FadeInUp.duration(600)} style={{ marginTop: 24 }}>
+      <View style={{ borderRadius: 28, overflow: "hidden" }}>
         <LinearGradient
           colors={colors}
           style={{ padding: 24, overflow: "hidden" }}
         >
-          {/* 🌦 Advanced Background Animation */}
+          {/* 🌦 Animated Background */}
           <WeatherAnimation weather={weather} isNight={night} />
 
-          <Text className="text-white text-xl font-semibold text-center">
+          {/* CITY */}
+          <Text
+            style={{
+              color: "white",
+              fontSize: 20,
+              fontWeight: "600",
+              textAlign: "center",
+            }}
+          >
             {city}
           </Text>
 
-          <Text className="text-white text-7xl font-extrabold text-center my-4">
-            {temperature}°
+          {/* TEMPERATURE */}
+          <Text
+            style={{
+              color: "white",
+              fontSize: 72,
+              fontWeight: "800",
+              textAlign: "center",
+              marginVertical: 10,
+            }}
+          >
+            {Math.round(temperature)}°
           </Text>
 
-          <Text className="text-white text-lg text-center mb-4">
-            ⛈ Stormy
+          {/* CONDITION */}
+          <Text
+            style={{
+              color: "white",
+              fontSize: 18,
+              textAlign: "center",
+              marginBottom: 16,
+            }}
+          >
+            {condition}
           </Text>
 
-          <View className="flex-row justify-between px-4 mb-6">
-            <View className="items-center">
-              <Text className="text-white/80">Humidity</Text>
-              <Text className="text-white font-bold">65%</Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-white/80">Wind</Text>
-              <Text className="text-white font-bold">12 km/h</Text>
-            </View>
+          {/* STATS */}
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              paddingHorizontal: 16,
+              marginBottom: 20,
+            }}
+          >
+            <Stat label="Humidity" value={`${humidity}%`} />
+            <Stat label="Wind" value={`${wind} m/s`} />
           </View>
 
+          {/* 5-DAY PREVIEW */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {forecast.map((item, index) => (
               <View
                 key={index}
-                className="bg-white/20 px-4 py-3 rounded-xl mr-3 items-center w-20"
+                style={{
+                  backgroundColor: "rgba(255,255,255,0.2)",
+                  paddingVertical: 12,
+                  paddingHorizontal: 10,
+                  borderRadius: 16,
+                  marginRight: 10,
+                  alignItems: "center",
+                  width: 70,
+                }}
               >
-                <Text className="text-white">{item.day}</Text>
-                <Text className="text-2xl">{item.icon}</Text>
-                <Text className="text-white font-semibold">
+                <Text style={{ color: "white", fontSize: 13 }}>
+                  {item.day}
+                </Text>
+                <Text style={{ fontSize: 22 }}>{item.icon}</Text>
+                <Text
+                  style={{
+                    color: "white",
+                    fontWeight: "600",
+                  }}
+                >
                   {item.temp}°
                 </Text>
               </View>
@@ -94,5 +153,31 @@ export default function WeatherCard({ city }: Props) {
         </LinearGradient>
       </View>
     </Animated.View>
+  );
+}
+
+/* ---------------- SMALL COMPONENT ---------------- */
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={{ alignItems: "center" }}>
+      <Text
+        style={{
+          color: "rgba(255,255,255,0.8)",
+          fontSize: 14,
+        }}
+      >
+        {label}
+      </Text>
+      <Text
+        style={{
+          color: "white",
+          fontSize: 16,
+          fontWeight: "600",
+        }}
+      >
+        {value}
+      </Text>
+    </View>
   );
 }

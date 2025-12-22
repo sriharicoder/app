@@ -6,7 +6,12 @@ export default function RootLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        animation: "slide_from_right", // ✅ page transition animation
+
+        // ✅ Valid for Stack (native-stack)
+        animation: "slide_from_right",
+
+        // Optional polish
+        contentStyle: { backgroundColor: "black" },
       }}
     />
   );

@@ -2,6 +2,7 @@ import { View, TextInput, TouchableOpacity, Text, FlatList } from "react-native"
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo } from "react";
 import { LOCATIONS } from "./data/locations";
+import { getCurrentCity } from "../services/locationService";
 
 type Props = {
   city: string;
@@ -13,9 +14,13 @@ export default function SearchBox({ city, setCity, onPress }: Props) {
   const suggestions = useMemo(() => {
     if (!city.trim()) return [];
 
-    return LOCATIONS.filter(item =>
-      item.district.toLowerCase().includes(city.toLowerCase())
-    );
+    const q = city.toLowerCase();
+    return LOCATIONS.filter(
+      item =>
+        item.district.toLowerCase().includes(q) ||
+        item.state.toLowerCase().includes(q) ||
+        item.country.toLowerCase().includes(q)
+    ).slice(0, 8);
   }, [city]);
 
   return (
@@ -24,9 +29,6 @@ export default function SearchBox({ city, setCity, onPress }: Props) {
         backgroundColor: "rgba(255,255,255,0.95)",
         borderRadius: 22,
         padding: 16,
-        shadowColor: "#000",
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
         elevation: 6,
       }}
     >
@@ -44,7 +46,6 @@ export default function SearchBox({ city, setCity, onPress }: Props) {
 
         <TextInput
           placeholder="Enter city / district"
-          placeholderTextColor="#94a3b8"
           value={city}
           onChangeText={setCity}
           style={{
@@ -52,17 +53,16 @@ export default function SearchBox({ city, setCity, onPress }: Props) {
             paddingVertical: 12,
             paddingHorizontal: 10,
             fontSize: 16,
-            color: "#0f172a",
           }}
         />
       </View>
 
-      {/* 🔽 SUGGESTIONS */}
+      {/* SUGGESTIONS */}
       {suggestions.length > 0 && (
         <View
           style={{
             marginTop: 10,
-            backgroundColor: "#ffffff",
+            backgroundColor: "#fff",
             borderRadius: 14,
             maxHeight: 180,
             overflow: "hidden",
@@ -75,11 +75,10 @@ export default function SearchBox({ city, setCity, onPress }: Props) {
             }
             renderItem={({ item }) => (
               <TouchableOpacity
-                onPress={() =>
-                  setCity(
-                    `${item.district}, ${item.state}, ${item.country}`
-                  )
-                }
+                onPress={() => {
+                  setCity(`${item.district}, ${item.state}, ${item.country}`);
+                  onPress();
+                }}
                 style={{
                   paddingVertical: 12,
                   paddingHorizontal: 14,
@@ -87,9 +86,7 @@ export default function SearchBox({ city, setCity, onPress }: Props) {
                   borderBottomColor: "#e5e7eb",
                 }}
               >
-                <Text style={{ fontSize: 15, color: "#0f172a" }}>
-                  {item.district}
-                </Text>
+                <Text style={{ fontSize: 15 }}>{item.district}</Text>
                 <Text style={{ fontSize: 12, color: "#64748b" }}>
                   {item.state}, {item.country}
                 </Text>
@@ -99,32 +96,24 @@ export default function SearchBox({ city, setCity, onPress }: Props) {
         </View>
       )}
 
-      {/* BUTTON */}
+      {/* GPS BUTTON */}
       <TouchableOpacity
-        onPress={onPress}
-        disabled={!city.trim()}
+        onPress={async () => {
+          const detected = await getCurrentCity();
+          if (detected) {
+            setCity(detected);
+            onPress();
+          }
+        }}
         style={{
-          marginTop: 14,
-          backgroundColor: city.trim()
-            ? "#2563eb"
-            : "#94a3b8",
-          paddingVertical: 14,
-          borderRadius: 16,
-          alignItems: "center",
+          marginTop: 12,
           flexDirection: "row",
           justifyContent: "center",
         }}
       >
-        <Ionicons name="search" size={18} color="white" />
-        <Text
-          style={{
-            color: "white",
-            fontSize: 16,
-            fontWeight: "600",
-            marginLeft: 8,
-          }}
-        >
-          Check Weather
+        <Ionicons name="navigate" size={18} color="#2563eb" />
+        <Text style={{ color: "#2563eb", marginLeft: 6 }}>
+          Use my current location
         </Text>
       </TouchableOpacity>
     </View>

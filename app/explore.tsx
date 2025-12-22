@@ -9,8 +9,8 @@ import Animated, {
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 
-import AnimatedGradient from "../../components/animations/AnimatedGradient";
-import WeatherAnimation from "../../components/animations/WeatherAnimation";
+import AnimatedGradient from "../components/animations/AnimatedGradient";
+import WeatherAnimation from "../components/animations/WeatherAnimation";
 
 export default function ExploreScreen() {
   const hour = new Date().getHours();
