@@ -1,109 +1,124 @@
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import Animated, {
-  FadeInUp,
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withRepeat,
-} from "react-native-reanimated";
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import Animated, { FadeInUp } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocalSearchParams, router } from "expo-router";
 
 import AnimatedGradient from "../components/animations/AnimatedGradient";
 import WeatherAnimation from "../components/animations/WeatherAnimation";
+import { getCurrentWeather } from "../services/weatherApi";
 
 export default function ExploreScreen() {
-  const hour = new Date().getHours();
-  const autoNight = hour >= 18 || hour <= 5;
+  const { city } = useLocalSearchParams<{ city: string }>();
 
-  const [isNight, setIsNight] = useState(autoNight);
-  const [wind, setWind] = useState(12);
-  const [feelsLike, setFeelsLike] = useState(false);
+  const [weather, setWeather] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  /* 🧭 Compass rotation */
-  const rotate = useSharedValue(0);
+  useEffect(() => {
+    if (!city) {
+      setLoading(false);
+      setError("City not provided");
+      return;
+    }
 
-  rotate.value = withRepeat(
-    withTiming(360, { duration: 6000 }),
-    -1,
-    false
-  );
+    (async () => {
+      try {
+        const data = await getCurrentWeather(city);
+        setWeather(data);
+      } catch (e) {
+        setError("Failed to load weather");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [city]);
 
-  const compassStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${rotate.value}deg` }],
-  }));
+  /* 🌙 SAFE DAY / NIGHT */
+  const isNight =
+    weather
+      ? Date.now() / 1000 < weather.sys.sunrise ||
+        Date.now() / 1000 > weather.sys.sunset
+      : false;
 
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1 }}>
       <AnimatedGradient isNight={isNight}>
-        {/* 🌦 Background animation */}
+        {/* 🌦 BACKGROUND */}
         <View style={styles.backgroundLayer}>
-          <WeatherAnimation weather="cloudy" isNight={isNight} />
+          {weather && (
+            <WeatherAnimation
+              weather={
+                weather.weather[0].main === "Clouds" ? "cloudy" : "sunny"
+              }
+              isNight={isNight}
+            />
+          )}
         </View>
 
-        {/* CONTENT */}
-        <View style={styles.content}>
-          {/* TITLE */}
-          <Animated.Text entering={FadeInUp.duration(500)} style={styles.title}>
-            🌍 Explore Weather
-          </Animated.Text>
+        {/* 🔙 HOME BUTTON */}
+        <TouchableOpacity
+          onPress={() => router.replace("/")}
+          style={styles.backButton}
+        >
+          <Ionicons name="home" size={22} color="white" />
+        </TouchableOpacity>
 
-          <Animated.Text
-            entering={FadeInUp.delay(150)}
-            style={styles.subtitle}
-          >
-            Interactive weather feature demos
-          </Animated.Text>
+        {/* ⏳ LOADING */}
+        {loading && (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color="white" />
+            <Text style={styles.infoText}>Loading weather…</Text>
+          </View>
+        )}
 
-          {/* 🌬 WIND SPEED */}
-          <Animated.View entering={FadeInUp.delay(250)} style={styles.card}>
-            <RowTitle icon="speedometer" title="Wind Speed" />
-            <Text style={styles.bigValue}>{wind} km/h</Text>
+        {/* ❌ ERROR */}
+        {!loading && error && (
+          <View style={styles.center}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
 
-            <PrimaryButton
-              label="Detect Wind Speed"
-              onPress={() => setWind(Math.floor(5 + Math.random() * 30))}
-            />
-          </Animated.View>
+        {/* ✅ CONTENT */}
+        {!loading && weather && (
+          <View style={styles.content}>
+            <Animated.Text entering={FadeInUp} style={styles.title}>
+              🌍 Weather Insights
+            </Animated.Text>
 
-          {/* 🧭 WIND DIRECTION */}
-          <Animated.View entering={FadeInUp.delay(350)} style={styles.card}>
-            <RowTitle icon="navigate" title="Wind Direction" />
+            <Animated.Text entering={FadeInUp.delay(100)} style={styles.subtitle}>
+              Live weather details for {city}
+            </Animated.Text>
 
-            <Animated.View style={[compassStyle, styles.compass]}>
-              <Ionicons name="navigate" size={42} color="white" />
+            <Animated.View entering={FadeInUp.delay(200)} style={styles.card}>
+              <RowTitle icon="speedometer" title="Wind Speed" />
+              <Text style={styles.bigValue}>
+                {weather.wind.speed} m/s
+              </Text>
             </Animated.View>
 
-            <Text style={styles.hint}>Live rotating compass (demo)</Text>
-          </Animated.View>
+            <Animated.View entering={FadeInUp.delay(300)} style={styles.card}>
+              <RowTitle icon="navigate" title="Wind Direction" />
+              <Text style={styles.bigValue}>
+                {weather.wind.deg}°
+              </Text>
+            </Animated.View>
 
-          {/* 🌡 FEELS LIKE */}
-          <Animated.View entering={FadeInUp.delay(450)} style={styles.card}>
-            <RowTitle icon="thermometer" title="Feels Like Temperature" />
+            <Animated.View entering={FadeInUp.delay(400)} style={styles.card}>
+              <RowTitle icon="thermometer" title="Feels Like" />
+              <Text style={styles.bigValue}>
+                {Math.round(weather.main.feels_like)}°
+              </Text>
+            </Animated.View>
 
-            <Text style={styles.bigValue}>
-              {feelsLike ? "Feels like 31°" : "Actual 29°"}
-            </Text>
-
-            <PrimaryButton
-              label="Toggle Feels Like"
-              onPress={() => setFeelsLike(!feelsLike)}
-            />
-          </Animated.View>
-
-          {/* 🌙 DAY / NIGHT */}
-          <Animated.View entering={FadeInUp.delay(550)} style={styles.card}>
-            <RowTitle
-              icon={isNight ? "moon" : "sunny"}
-              title="Day / Night Mode"
-            />
-
-            <PrimaryButton
-              label={isNight ? "Switch to Day" : "Switch to Night"}
-              onPress={() => setIsNight(!isNight)}
-            />
-          </Animated.View>
-        </View>
+            <Animated.View entering={FadeInUp.delay(500)} style={styles.card}>
+              <RowTitle icon={isNight ? "moon" : "sunny"} title="Time Mode" />
+              <Text style={styles.bigValue}>
+                {isNight ? "Night" : "Day"}
+              </Text>
+            </Animated.View>
+          </View>
+        )}
       </AnimatedGradient>
     </View>
   );
@@ -120,37 +135,49 @@ function RowTitle({ icon, title }: { icon: any; title: string }) {
   );
 }
 
-function PrimaryButton({
-  label,
-  onPress,
-}: {
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity onPress={onPress} style={styles.primaryButton}>
-      <Text style={styles.primaryButtonText}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
 /* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-
   backgroundLayer: {
     position: "absolute",
     inset: 0,
     pointerEvents: "none",
   },
 
+  backButton: {
+    position: "absolute",
+    top: 50,
+    left: 20,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "#2563eb",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+    elevation: 8,
+  },
+
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  infoText: {
+    color: "white",
+    marginTop: 8,
+  },
+
+  errorText: {
+    color: "#f87171",
+    fontSize: 16,
+  },
+
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 70,
+    paddingTop: 120,
   },
 
   title: {
@@ -180,13 +207,6 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: "800",
     textAlign: "center",
-    marginBottom: 6,
-  },
-
-  hint: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 13,
-    textAlign: "center",
   },
 
   rowTitle: {
@@ -200,23 +220,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 6,
-  },
-
-  compass: {
-    marginVertical: 10,
-    alignSelf: "center",
-  },
-
-  primaryButton: {
-    backgroundColor: "#2563eb",
-    paddingVertical: 12,
-    borderRadius: 14,
-    alignItems: "center",
-    marginTop: 8,
-  },
-
-  primaryButtonText: {
-    color: "white",
-    fontWeight: "600",
   },
 });

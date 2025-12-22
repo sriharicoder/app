@@ -1,7 +1,5 @@
-import { View, TextInput, TouchableOpacity, Text, FlatList } from "react-native";
+import { View, TextInput, TouchableOpacity, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo } from "react";
-import { LOCATIONS } from "./data/locations";
 import { getCurrentCity } from "../services/locationService";
 
 type Props = {
@@ -11,18 +9,6 @@ type Props = {
 };
 
 export default function SearchBox({ city, setCity, onPress }: Props) {
-  const suggestions = useMemo(() => {
-    if (!city.trim()) return [];
-
-    const q = city.toLowerCase();
-    return LOCATIONS.filter(
-      item =>
-        item.district.toLowerCase().includes(q) ||
-        item.state.toLowerCase().includes(q) ||
-        item.country.toLowerCase().includes(q)
-    ).slice(0, 8);
-  }, [city]);
-
   return (
     <View
       style={{
@@ -46,6 +32,7 @@ export default function SearchBox({ city, setCity, onPress }: Props) {
 
         <TextInput
           placeholder="Enter city / district"
+          placeholderTextColor="#94a3b8"
           value={city}
           onChangeText={setCity}
           style={{
@@ -53,50 +40,39 @@ export default function SearchBox({ city, setCity, onPress }: Props) {
             paddingVertical: 12,
             paddingHorizontal: 10,
             fontSize: 16,
+            color: "#0f172a",
           }}
         />
       </View>
 
-      {/* SUGGESTIONS */}
-      {suggestions.length > 0 && (
-        <View
+      {/* SEARCH BUTTON */}
+      <TouchableOpacity
+        onPress={onPress}
+        disabled={!city.trim()}
+        style={{
+          marginTop: 14,
+          backgroundColor: city.trim() ? "#2563eb" : "#94a3b8",
+          paddingVertical: 14,
+          borderRadius: 16,
+          alignItems: "center",
+          flexDirection: "row",
+          justifyContent: "center",
+        }}
+      >
+        <Ionicons name="search" size={18} color="white" />
+        <Text
           style={{
-            marginTop: 10,
-            backgroundColor: "#fff",
-            borderRadius: 14,
-            maxHeight: 180,
-            overflow: "hidden",
+            color: "white",
+            fontSize: 16,
+            fontWeight: "600",
+            marginLeft: 8,
           }}
         >
-          <FlatList
-            data={suggestions}
-            keyExtractor={(item) =>
-              `${item.district}-${item.state}`
-            }
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                onPress={() => {
-                  setCity(`${item.district}, ${item.state}, ${item.country}`);
-                  onPress();
-                }}
-                style={{
-                  paddingVertical: 12,
-                  paddingHorizontal: 14,
-                  borderBottomWidth: 1,
-                  borderBottomColor: "#e5e7eb",
-                }}
-              >
-                <Text style={{ fontSize: 15 }}>{item.district}</Text>
-                <Text style={{ fontSize: 12, color: "#64748b" }}>
-                  {item.state}, {item.country}
-                </Text>
-              </TouchableOpacity>
-            )}
-          />
-        </View>
-      )}
+          Check Weather
+        </Text>
+      </TouchableOpacity>
 
-      {/* GPS BUTTON */}
+      {/* 📍 GPS BUTTON */}
       <TouchableOpacity
         onPress={async () => {
           const detected = await getCurrentCity();
@@ -109,6 +85,7 @@ export default function SearchBox({ city, setCity, onPress }: Props) {
           marginTop: 12,
           flexDirection: "row",
           justifyContent: "center",
+          alignItems: "center",
         }}
       >
         <Ionicons name="navigate" size={18} color="#2563eb" />

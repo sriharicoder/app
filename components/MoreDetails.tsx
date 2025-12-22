@@ -6,20 +6,24 @@ import Animated, { FadeInUp } from "react-native-reanimated";
 
 type Props = {
   forecast: any;
-  mode?: "preview" | "full"; // 👈 important
+  onlyFiveDay?: boolean; // ✅ optional
 };
 
 /* ---------------- MAIN ---------------- */
 
-export default function MoreDetails({ forecast, mode = "full" }: Props) {
+export default function MoreDetails({
+  forecast,
+  onlyFiveDay = false,
+}: Props) {
   if (!forecast) return null;
 
   return (
     <View style={{ marginTop: 12 }}>
+      {/* ✅ ALWAYS SHOW 5 DAY */}
       <FiveDayForecast forecast={forecast} />
 
-      {/* ❌ Hide below sections on index */}
-      {mode === "full" && (
+      {/* ❌ Hide these on index */}
+      {!onlyFiveDay && (
         <>
           <HourlyForecast forecast={forecast} />
           <StatsGrid forecast={forecast} />
@@ -67,7 +71,7 @@ function FiveDayForecast({ forecast }: { forecast: any }) {
   );
 }
 
-/* ---------------- HOURLY ---------------- */
+/* ---------------- HOURLY FORECAST ---------------- */
 
 function HourlyForecast({ forecast }: { forecast: any }) {
   const hourly = forecast.list.slice(0, 8);
@@ -93,7 +97,7 @@ function HourlyForecast({ forecast }: { forecast: any }) {
   );
 }
 
-/* ---------------- STATS ---------------- */
+/* ---------------- STATS GRID ---------------- */
 
 function StatsGrid({ forecast }: { forecast: any }) {
   const now = forecast.list[0];
@@ -102,13 +106,25 @@ function StatsGrid({ forecast }: { forecast: any }) {
     <View style={styles.grid}>
       <Stat icon="water" title="Humidity" value={`${now.main.humidity}%`} />
       <Stat icon="navigate" title="Wind" value={`${now.wind.speed} km/h`} />
-      <Stat icon="thermometer" title="Pressure" value={`${now.main.pressure} hPa`} />
+      <Stat
+        icon="thermometer"
+        title="Pressure"
+        value={`${now.main.pressure} hPa`}
+      />
       <Stat icon="sunny" title="Clouds" value={`${now.clouds.all}%`} />
     </View>
   );
 }
 
-function Stat({ icon, title, value }: any) {
+function Stat({
+  icon,
+  title,
+  value,
+}: {
+  icon: any;
+  title: string;
+  value: string;
+}) {
   return (
     <Animated.View entering={FadeInUp} style={styles.statCard}>
       <Ionicons name={icon} size={20} color="#2563eb" />

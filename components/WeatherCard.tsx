@@ -1,6 +1,8 @@
-import { Text, View, ScrollView } from "react-native";
+import { Text, View, ScrollView, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import { Ionicons } from "@expo/vector-icons";
+
 import WeatherAnimation, {
   WeatherType,
 } from "./animations/WeatherAnimation";
@@ -12,6 +14,8 @@ type Props = {
   humidity: number;
   wind: number;
   condition: string;
+  onSave?: () => void;   // ✅ optional
+  saved?: boolean;      // ✅ optional
 };
 
 /* ---------------- DAY / NIGHT ---------------- */
@@ -33,14 +37,14 @@ const getTempGradient = (
   temp: number,
   night: boolean
 ): readonly [string, string] => {
-  if (night) return ["#020617", "#0f172a"]; // night
-  if (temp <= 15) return ["#38bdf8", "#1e40af"]; // cold
-  if (temp <= 25) return ["#22c55e", "#84cc16"]; // pleasant
-  if (temp <= 35) return ["#facc15", "#f97316"]; // warm
-  return ["#ef4444", "#b91c1c"]; // hot
+  if (night) return ["#020617", "#0f172a"];
+  if (temp <= 15) return ["#38bdf8", "#1e40af"];
+  if (temp <= 25) return ["#22c55e", "#84cc16"];
+  if (temp <= 35) return ["#facc15", "#f97316"];
+  return ["#ef4444", "#b91c1c"];
 };
 
-/* ---------------- FORECAST (PREVIEW) ---------------- */
+/* ---------------- FORECAST PREVIEW (STATIC) ---------------- */
 const forecast = [
   { day: "Mon", temp: 26, icon: "☀️" },
   { day: "Tue", temp: 28, icon: "🌤️" },
@@ -55,6 +59,8 @@ export default function WeatherCard({
   humidity,
   wind,
   condition,
+  onSave,
+  saved,
 }: Props) {
   const night = isNightTime();
   const weather: WeatherType = mapConditionToWeather(condition);
@@ -69,6 +75,25 @@ export default function WeatherCard({
         >
           {/* 🌦 Animated Background */}
           <WeatherAnimation weather={weather} isNight={night} />
+
+          {/* ❤️ SAVE / WISHLIST BUTTON */}
+          {onSave && (
+            <TouchableOpacity
+              onPress={onSave}
+              style={{
+                position: "absolute",
+                top: 18,
+                right: 18,
+                zIndex: 10,
+              }}
+            >
+              <Ionicons
+                name={saved ? "heart" : "heart-outline"}
+                size={24}
+                color={saved ? "#f43f5e" : "white"}
+              />
+            </TouchableOpacity>
+          )}
 
           {/* CITY */}
           <Text

@@ -1,39 +1,36 @@
+import { View, Text, ActivityIndicator, TouchableOpacity } from "react-native";
+import { useLocalSearchParams, Stack, router } from "expo-router";
 import { useEffect, useState } from "react";
-import { View, Text, ActivityIndicator } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
 import AnimatedGradient from "../components/animations/AnimatedGradient";
 import WeatherAnimation from "../components/animations/WeatherAnimation";
 import MoreDetails from "../components/MoreDetails";
-
-import { getCurrentCity } from "../services/locationService";
 import { getFiveDayForecast } from "../services/weatherApi";
 
 export default function DetailsScreen() {
-  const hour = new Date().getHours();
-  const isNight = hour >= 18 || hour <= 5;
+  const { city } = useLocalSearchParams<{ city: string }>();
 
   const [forecast, setForecast] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  /* ---------------- FETCH FORECAST ---------------- */
+  const hour = new Date().getHours();
+  const isNight = hour >= 18 || hour <= 5;
 
   useEffect(() => {
+    if (!city) return;
+
     (async () => {
       try {
-        const city = await getCurrentCity();
-        if (!city) return;
-
         const data = await getFiveDayForecast(city);
         setForecast(data);
       } catch (e) {
-        console.log("Forecast error", e);
+        console.log("Forecast fetch error", e);
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [city]);
 
   return (
     <>
@@ -41,11 +38,39 @@ export default function DetailsScreen() {
 
       <View style={{ flex: 1 }}>
         <AnimatedGradient isNight={isNight}>
+          {/* 🌦 Background animation */}
           <View style={{ position: "absolute", inset: 0 }}>
             <WeatherAnimation weather="cloudy" isNight={isNight} />
           </View>
 
-          <SafeAreaView style={{ flex: 1, padding: 14 }}>
+          {/* 🏠 HOME BUTTON */}
+          <TouchableOpacity
+            onPress={() => router.replace("/")}
+            style={{
+              position: "absolute",
+              top: 50,
+              left: 20,
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: "#2563eb",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 10,
+              elevation: 8,
+            }}
+          >
+            <Ionicons name="home" size={22} color="white" />
+          </TouchableOpacity>
+
+          {/* CONTENT */}
+          <View
+            style={{
+              flex: 1,
+              paddingTop: 110,
+              paddingHorizontal: 14,
+            }}
+          >
             <Text
               style={{
                 fontSize: 26,
@@ -61,10 +86,9 @@ export default function DetailsScreen() {
             {loading ? (
               <ActivityIndicator size="large" color="white" />
             ) : (
-              forecast && <MoreDetails forecast={forecast} mode="full" />
-
+              <MoreDetails forecast={forecast} />
             )}
-          </SafeAreaView>
+          </View>
         </AnimatedGradient>
       </View>
     </>

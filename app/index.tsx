@@ -1,13 +1,15 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
-  Text,
   View,
-  ActivityIndicator,
+  Text,
   FlatList,
+  ActivityIndicator,
+  TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import AnimatedGradient from "../components/animations/AnimatedGradient";
 import WeatherAnimation from "../components/animations/WeatherAnimation";
@@ -21,7 +23,7 @@ import {
 } from "../services/weatherApi";
 import { getCurrentCity } from "../services/locationService";
 
-/* ---------------- WEATHER TYPE ---------------- */
+/* ---------------- WEATHER MAPPER ---------------- */
 
 function mapWeatherType(main: string) {
   if (main === "Rain") return "rainy";
@@ -30,66 +32,80 @@ function mapWeatherType(main: string) {
   return "sunny";
 }
 
-/* ---------------- CLEAN CITY NAME ---------------- */
-
-function normalizeCity(input: string) {
-  return input.split(",")[0].trim(); // "Chennai, TN, India" → "Chennai"
-}
-
 export default function Index() {
   const [city, setCity] = useState("");
   const [weather, setWeather] = useState<any>(null);
   const [forecast, setForecast] = useState<any>(null);
+  const [savedCities, setSavedCities] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
 
   const hour = new Date().getHours();
   const isNight = hour >= 18 || hour <= 5;
 
+  /* ---------------- LOAD SAVED LOCATIONS ---------------- */
+
+  useEffect(() => {
+    AsyncStorage.getItem("savedCities").then(data => {
+      if (data) setSavedCities(JSON.parse(data));
+    });
+  }, []);
+
+  /* ---------------- GPS DEFAULT CITY ---------------- */
+
+  useEffect(() => {
+    (async () => {
+      const detected = await getCurrentCity();
+      const defaultCity = detected || "Chennai"; // ✅ fallback
+      if (detected) {
+        setCity(detected);
+        fetchWeather(detected);
+      }
+    })();
+  }, []);
+
   /* ---------------- FETCH WEATHER ---------------- */
 
   async function fetchWeather(selectedCity = city) {
-  const cleanCity = selectedCity.split(",")[0].trim(); // 👈 FIX
+    if (!selectedCity.trim()) return;
 
-  if (!cleanCity) return;
+    try {
+      setLoading(true);
+      setError("");
 
-  try {
-    setLoading(true);
-    setError("");
+      const [w, f] = await Promise.all([
+        getCurrentWeather(selectedCity),
+        getFiveDayForecast(selectedCity),
+      ]);
 
-    const [weatherData, forecastData] = await Promise.all([
-      getCurrentWeather(cleanCity),
-      getFiveDayForecast(cleanCity),
-    ]);
-
-    setWeather(weatherData);
-    setForecast(forecastData);
-  } catch {
-    setError("City not found");
-  } finally {
-    setLoading(false);
-  }
-}
-
-
-  /* ---------------- GPS (SAFE) ---------------- */
-
-  useEffect(() => {
-  (async () => {
-    const detectedCity = await getCurrentCity();
-
-    if (detectedCity) {
-      setCity(detectedCity);
-      fetchWeather(detectedCity); // ✅ auto weather
-    } else {
-      // 🟡 GPS failed → fallback city
-      const fallbackCity = "Chennai";
-      setCity(fallbackCity);
-      fetchWeather(fallbackCity);
+      setWeather(w);
+      setForecast(f);
+      setCity(selectedCity);
+    } catch {
+      setError("Weather not found");
+      setWeather(null);
+      setForecast(null);
+    } finally {
+      setLoading(false);
+      setShowSearch(false);
     }
-  })();
-}, []);
+  }
 
+  /* ---------------- SAVE / REMOVE LOCATION ---------------- */
+
+  async function toggleSave(cityName: string) {
+    let updated = [...savedCities];
+
+    if (updated.includes(cityName)) {
+      updated = updated.filter(c => c !== cityName);
+    } else {
+      updated.push(cityName);
+    }
+
+    setSavedCities(updated);
+    await AsyncStorage.setItem("savedCities", JSON.stringify(updated));
+  }
 
   const condition = weather?.weather?.[0]?.main ?? "Clear";
   const weatherType = mapWeatherType(condition);
@@ -100,6 +116,7 @@ export default function Index() {
 
       <View style={{ flex: 1 }}>
         <AnimatedGradient isNight={isNight}>
+          {/* 🌦 Background animation */}
           <View style={{ position: "absolute", inset: 0 }}>
             <WeatherAnimation weather={weatherType} isNight={isNight} />
           </View>
@@ -108,8 +125,8 @@ export default function Index() {
             <FlatList
               data={weather ? [weather] : []}
               keyExtractor={() => "weather"}
-              contentContainerStyle={{ paddingTop: 24, paddingBottom: 120 }}
               showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 140 }}
 
               ListHeaderComponent={
                 <>
@@ -119,28 +136,37 @@ export default function Index() {
                       fontWeight: "800",
                       color: "white",
                       textAlign: "center",
-                      marginBottom: 20,
+                      marginVertical: 20,
                     }}
                   >
-                    🌤 Smart Weather App
+                    🌤 Smart Weather
                   </Text>
 
-                  <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
-                    <SearchBox
-                      city={city}
-                      setCity={setCity}
-                      onPress={() => fetchWeather(city)}
-                    />
-                  </View>
-
-                  {loading && (
-                    <ActivityIndicator size="large" color="white" />
+                  {/* SAVED LOCATIONS */}
+                  {savedCities.length > 0 && (
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", marginHorizontal: 14 }}>
+                      {savedCities.map(item => (
+                        <TouchableOpacity
+                          key={item}
+                          onPress={() => fetchWeather(item)}
+                          onLongPress={() => toggleSave(item)}
+                          style={{
+                            backgroundColor: "rgba(255,255,255,0.25)",
+                            paddingHorizontal: 14,
+                            paddingVertical: 8,
+                            borderRadius: 20,
+                            margin: 6,
+                          }}
+                        >
+                          <Text style={{ color: "white" }}>{item}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
                   )}
 
+                  {loading && <ActivityIndicator size="large" color="white" />}
                   {error ? (
-                    <Text style={{ color: "red", textAlign: "center" }}>
-                      {error}
-                    </Text>
+                    <Text style={{ color: "red", textAlign: "center" }}>{error}</Text>
                   ) : null}
                 </>
               }
@@ -154,33 +180,98 @@ export default function Index() {
                       humidity={weather.main.humidity}
                       wind={weather.wind.speed}
                       condition={condition}
+                      onSave={() => toggleSave(weather.name)}
+                      saved={savedCities.includes(weather.name)}
                     />
 
-                   <MoreDetails forecast={forecast} mode="preview" />
-
+                    {/* ONLY 5-DAY FORECAST */}
+                    <MoreDetails forecast={forecast} onlyFiveDay />
                   </View>
                 ) : null
               }
             />
 
-            {/* Floating buttons */}
-            <View style={{ position: "absolute", bottom: 30, right: 20 }}>
-              <Ionicons.Button
-                name="compass"
-                backgroundColor="#2563eb"
-                borderRadius={30}
-                onPress={() => router.push("/explore")}
-              />
-            </View>
+            {/* 🔍 SEARCH OVERLAY */}
+            {showSearch && (
+              <View
+                style={{
+                  position: "absolute",
+                  bottom: 110,
+                  left: 20,
+                  right: 20,
+                }}
+              >
+                <SearchBox
+                  city={city}
+                  setCity={setCity}
+                  onPress={() => fetchWeather()}
+                />
+              </View>
+            )}
 
-            <View style={{ position: "absolute", bottom: 30, left: 20 }}>
-              <Ionicons.Button
-                name="stats-chart"
-                backgroundColor="#facc15"
-                color="#1e293b"
-                borderRadius={30}
-                onPress={() => router.push("/details")}
-              />
+            {/* 🔘 FLOATING ACTION BUTTONS */}
+            <View
+              style={{
+                position: "absolute",
+                bottom: 24,
+                left: 0,
+                right: 0,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                paddingHorizontal: 20,
+                alignItems: "center",
+              }}
+            >
+              {/* 🧭 Explore */}
+             <Ionicons.Button
+  name="compass"
+  backgroundColor="#2563eb"
+  onPress={() =>
+    router.push({
+      pathname: "/explore",
+      params: { city },
+    })
+  }
+/>
+
+
+              {/* ➕ Add */}
+              <TouchableOpacity
+                onPress={() => setShowSearch(v => !v)}
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 32,
+                  backgroundColor: "#2563eb",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  elevation: 10,
+                }}
+              >
+                <Ionicons name="add" size={32} color="white" />
+              </TouchableOpacity>
+
+              {/* 📊 Details */}
+              <TouchableOpacity
+  onPress={() =>
+    router.push({
+      pathname: "/details",
+      params: { city }, // ✅ PASS CITY HERE
+    })
+  }
+  style={{
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: "#facc15",
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 8,
+  }}
+>
+  <Ionicons name="stats-chart" size={24} color="#1e293b" />
+</TouchableOpacity>
+
             </View>
           </SafeAreaView>
         </AnimatedGradient>
